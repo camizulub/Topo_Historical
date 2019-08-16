@@ -9,6 +9,7 @@
 #
 import pandas as pd
 from datetime import datetime, timedelta, timezone
+import pytz
 from ib_insync import *
 
 class Topo:
@@ -18,8 +19,9 @@ class Topo:
         self.clientid = input('\tClient ID: ')
         self.ticket = input('\tTicket: ')
         self.exch = input('\tExchange: ')
+        #self.timeac = input('\tMinutes after Market Close: ')
         self.contract = Contract(secType='CONTFUT', exchange=self.exch, symbol=self.ticket)
-        self.start= '20190816 00:00:00'
+        self.start= '20190816 15:00:00'
         self.data_type = 'TRADES'
         self.n_seconds = (datetime.now() - datetime.strptime(self.start, '%Y%m%d %H:%M:%S')).seconds
         self.counter = 0
@@ -37,7 +39,7 @@ class Topo:
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
-        tz = 'US/Central'
+        tz = pytz.timezone('US/Central')
         for self.counter in range(self.counter_range):
             if self.counter == 0: 
                 hist = ib.reqHistoricalTicks(
@@ -50,8 +52,10 @@ class Topo:
                 df = util.df(hist)
                 self.data.append(df)
             else:
-                if df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz) >= (datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(tz=tz) - timedelta(minutes=5)):
-                    break
+                if (df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz) >= (datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(tz=tz))) \
+                    or (df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).weekday() == 4 and df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).hour == 15\
+                        and df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).minute == 59):
+                        break
                 else:
                     hist = ib.reqHistoricalTicks(
                             self.contract,
@@ -62,7 +66,7 @@ class Topo:
                             useRth=False)
                     df = util.df(hist)
                     print(df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz))
-                    print((datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(tz=tz) - timedelta(minutes=5)))
+                    print((datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(tz=tz)))
                     self.data.append(df)
                 
     def save_data(self):
