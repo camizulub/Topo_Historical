@@ -8,9 +8,8 @@
 # camilo.zuluaga.trader@gmail.com
 #
 import pandas as pd
-from datetime import datetime, timedelta 
+from datetime import datetime, timedelta, timezone
 from ib_insync import *
-import pytz
 
 class Topo:
 
@@ -20,9 +19,9 @@ class Topo:
         self.ticket = input('\tTicket: ')
         self.exch = input('\tExchange: ')
         self.contract = Contract(secType='CONTFUT', exchange=self.exch, symbol=self.ticket)
-        self.start= '20190101 00:00:00'
-        self.data_type = 'BID_ASK'
-        self.n_days = (datetime.now() - datetime.strptime(self.start, '%Y%m%d %H:%M:%S')).days
+        self.start= '20190816 00:00:00'
+        self.data_type = 'TRADES'
+        self.n_seconds = (datetime.now() - datetime.strptime(self.start, '%Y%m%d %H:%M:%S')).seconds
         self.counter = 0
         self.data = []
 
@@ -33,11 +32,12 @@ class Topo:
         
     def set_range(self):
         ''' Sets the objective counter to perform the loop.'''
-        self.counter_range = round(self.n_days*24)
+        self.counter_range = round(self.n_seconds/24)
         print('Counter Range= ' + str(self.counter_range))
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
+        tz = 'US/Central'
         for self.counter in range(self.counter_range):
             if self.counter == 0: 
                 hist = ib.reqHistoricalTicks(
@@ -50,25 +50,28 @@ class Topo:
                 df = util.df(hist)
                 self.data.append(df)
             else:
-                if df.iloc[-1,0] >= (datetime.utcnow().replace(tzinfo=pytz.UTC) - timedelta(hours=10)):
+                if df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz) >= (datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(tz=tz) - timedelta(minutes=5)):
                     break
                 else:
                     hist = ib.reqHistoricalTicks(
                             self.contract,
-                            startDateTime=df.iloc[-1,0].strftime("%Y%m%d %H:%M:%S"),
+                            startDateTime=df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).strftime("%Y%m%d %H:%M:%S"),
                             endDateTime='',
                             numberOfTicks=1000,
                             whatToShow=self.data_type,
                             useRth=False)
                     df = util.df(hist)
+                    print(df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz))
+                    print((datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(tz=tz) - timedelta(minutes=5)))
                     self.data.append(df)
                 
     def save_data(self):
         ''' Saves the data in a CSV file, if the name is not changed it overwirtes the file
         in the destination folder.'''
         final = pd.concat(self.data)
-        final = final.drop(columns= ['tickAttribBidAsk'] )
-        final.to_json(r'/home/camilo/Dropbox/Historical Data/{}(ticks).json'.format(self.ticket))
+        final.drop(columns= ['tickAttribLast', 'exchange', 'specialConditions'], inplace=True)
+        final.set_index('time', inplace=True)
+        final.to_csv('/home/milo/Dropbox/Codigos/Data/{}(ticks).csv'.format(self.ticket))
 
     def digging(self):
         self.connect()
@@ -81,6 +84,6 @@ if __name__ == '__main__':
     ib = IB()
     print("Starting")
     topito = Topo()
-    topito.digging
+    topito.digging()
     print("Finished")
         
