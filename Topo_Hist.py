@@ -20,11 +20,14 @@ class Topo:
         self.ticket = input('\tTicket: ')
         self.exch = input('\tExchange: ')
         self.contract = Contract(secType='CONTFUT', exchange=self.exch, symbol=self.ticket)
-        self.start= '20190811 00:00:00'
+        self.format = "%Y%m%d %H:%M:%S"
+        self.start = '20190811 00:00:00'
+        self.startdt = datetime.strptime(self.start, self.format)
         self.data_type = 'TRADES'
-        self.n_seconds = (datetime.now() - datetime.strptime(self.start, '%Y%m%d %H:%M:%S')).seconds
+        self.n_seconds = (datetime.now() - self.startdt).seconds
         self.counter = 0
         self.data = []
+        self.tz = pytz.timezone('US/Eastern')
 
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
@@ -38,42 +41,40 @@ class Topo:
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
-        tz = pytz.timezone('US/Eastern')
         for self.counter in range(self.counter_range):
             if self.counter == 0: 
                 hist = ib.reqHistoricalTicks(
                         self.contract,
-                        startDateTime=self.start,
-                        endDateTime='',
+                        startDateTime='',
+                        endDateTime=datetime.now(),
                         numberOfTicks=1000,
                         whatToShow=self.data_type,
                         useRth=False)
                 df = util.df(hist)
                 self.data.append(df)
             else:
-                if (df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz) >= (datetime.utcnow().replace(tzinfo=timezone.utc).astimezone(tz=tz))) \
-                    or (df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).weekday() == 4 and df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).hour == 16\
-                        and df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).minute == 59):
+                if df.iloc[0,0].replace(tzinfo=timezone.utc).astimezone(tz=self.tz) <= self.startdt.replace(tzinfo=timezone.utc).astimezone(tz=self.tz):
                         break
                 else:
                     hist = ib.reqHistoricalTicks(
                             self.contract,
-                            startDateTime=df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz).strftime("%Y%m%d %H:%M:%S"),
-                            endDateTime='',
+                            startDateTime='',
+                            endDateTime=df.iloc[0,0].replace(tzinfo=timezone.utc).astimezone(tz=self.tz).strftime(self.format),
                             numberOfTicks=1000,
                             whatToShow=self.data_type,
                             useRth=False)
                     df = util.df(hist)
-                    print(df.iloc[-1,0].replace(tzinfo=timezone.utc).astimezone(tz=tz))
+                    print(df.iloc[0,0].replace(tzinfo=timezone.utc).astimezone(tz=self.tz))
                     self.data.append(df)
                 
     def save_data(self):
         ''' Saves the data in a CSV file, if the name is not changed it overwirtes the file
         in the destination folder.'''
+        self.data.reverse()
         final = pd.concat(self.data)
         final.drop(columns= ['tickAttribLast', 'exchange', 'specialConditions'], inplace=True)
         final.set_index('time', inplace=True)
-        final.to_csv('/home/milo/Dropbox/Codigos/Data/{}(ticks).csv'.format(self.ticket))
+        final.to_csv('/home/camilo/Dropbox/Codigos/Data/{}(ticks){}.csv'.format(self.ticket, self.start))
 
     def digging(self):
         self.connect()
