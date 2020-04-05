@@ -93,7 +93,7 @@ class Topo:
         init_date = ''.join(alphanumeric)
         alphanumeric = [character for character in str(self.last) if character.isalnum()]
         end_date = ''.join(alphanumeric)
-        final.to_csv('C:/Users/Baham/Dropbox/Codigos/Data/{}_{}-{}_ticks.csv'.format(self.ticket, init_date , end_date))
+        final.to_csv('{}_{}-{}_ticks.csv'.format(self.ticket, init_date , end_date))
         time_run = 'Minutes Running {}'.format(round((datetime.now() - self.start_run).total_seconds()/60, 2))
         print(time_run)
 
