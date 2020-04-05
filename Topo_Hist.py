@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 import pytz
 from ib_insync import IB, util, Contract
 from tqdm import tqdm
+import copy
 
 class Topo:
 
@@ -22,7 +23,7 @@ class Topo:
         self.exch = input('\tExchange: ')
         self.contract = Contract(secType='CONTFUT', exchange=self.exch, symbol=self.ticket)
         self.format = "%Y%m%d %H:%M:%S"
-        self.start = '20191001 00:00:00'
+        self.start = '20061001 00:00:00'
         self.startdt = datetime.strptime(self.start, self.format)
         self.data_type = 'TRADES'
         self.n_seconds = ((datetime.now() - self.startdt).days*60*60*24) + (datetime.now() - self.startdt).seconds
@@ -33,7 +34,7 @@ class Topo:
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
         ib.connect('127.0.0.1', 7498, clientId=self.clientid)
-        ib.qualifyContracts(self.contract)
+        ib.qualifyContracts(copy.copy(self.contract))
         
     def set_range(self):
         ''' Sets the objective counter to perform the loop.'''
@@ -46,8 +47,8 @@ class Topo:
             if self.counter == 0: 
                 hist = ib.reqHistoricalData(
                         self.contract, endDateTime='',
-                        durationStr='2000 S',
-                        barSizeSetting='1 secs',
+                        durationStr='1 D',
+                        barSizeSetting='1 min',
                         whatToShow=self.data_type,
                         useRTH=False,
                         formatDate=1)
@@ -62,8 +63,8 @@ class Topo:
                     hist = ib.reqHistoricalData(
                             self.contract,
                             endDateTime=df.iloc[0,0].strftime(self.format),
-                            durationStr='2000 S',
-                            barSizeSetting='1 secs',
+                            durationStr='1 D',
+                            barSizeSetting='1 min',
                             whatToShow=self.data_type,
                             useRTH=False,
                             formatDate=1)
@@ -83,7 +84,7 @@ class Topo:
         final['Date'] = pd.to_datetime(final['Date'], format= time_format)
         final.set_index('Date', inplace=True)
         final = final.drop(columns= ['Barcount', 'Average'] )
-        final.to_csv('C:/Users/MiloZB/Dropbox/Codigos/Data/{}(secIB).csv'.format(self.ticket))
+        final.to_csv('C:/Users/Baham/Dropbox/Codigos/Data/{}1min.csv'.format(self.ticket))
 
     def digging(self):
         self.connect()
