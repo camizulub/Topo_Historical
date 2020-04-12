@@ -11,11 +11,11 @@ class Topo:
     def __init__(self):
         '''Initializes the topo atribuites.'''
         self.clientid = input('\tClient ID: ')
-        self.ticket = input('\tTicket: ')
-        self.exch = input('\tExchange: ')
+        self.symbols = ['MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS', 'GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'YO']
+        self.exchanges = ['GLOBEX', 'GLOBEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX', 'ECBOT', 'NYMEX', 'NYMEX',
+                            'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX']
         self.start = input('\tFrom Date (YYYYMMDD HH:MM): ')
         self.start_run = datetime.now()
-        self.contract = Contract(secType='CONTFUT', exchange=self.exch, symbol=self.ticket)
         self.format = '%Y%m%d %H:%M'
         self.startdt = datetime.strptime(self.start, self.format)       
         self.data_type = 'TRADES'
@@ -27,7 +27,6 @@ class Topo:
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
         ib.connect('127.0.0.1', 7498, clientId=self.clientid)
-        ib.qualifyContracts(self.contract)
 
     def printProgressBar(self, iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = '\r'):
         '''Call in a loop to create terminal progress bar
@@ -86,7 +85,10 @@ class Topo:
         final.set_index('Date', inplace=True)
         final.index = final.index.tz_convert(self.tz).tz_localize(tz = None) #Convert from UTC to TZ parameter
         final = final[self.startdt:] #Filter from the begining date
-        final = final.round(2)
+        if final.iloc[0,0] > 1:
+            final = final.round(2)
+        else:
+            final = final.round(5)
         final = final.groupby(['Date','Price'], sort=False).sum()[['Size']].reset_index() #Compress data for the same time and price
         final.set_index('Date', inplace=True)
         alphanumeric = [character for character in str(self.startdt) if character.isalnum()]
@@ -100,8 +102,16 @@ class Topo:
     def digging(self):
         '''Start the topo'''
         self.connect()
-        self.looping()
-        self.save_data()
+        for symbol, exchange in zip(self.symbols, self.exchanges):
+            print('Downloading data for {}'.format(symbol))
+            self.ticket = symbol
+            self.exch = exchange
+            self.contract = Contract(secType='CONTFUT', exchange=self.exch, symbol=self.ticket)
+            ib.qualifyContracts(self.contract)
+            self.looping()
+            self.save_data()
+            self.counter = 0
+            self.data = []
 
 if __name__ == '__main__':
 
