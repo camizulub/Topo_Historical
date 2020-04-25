@@ -11,17 +11,12 @@ class Topo:
         self.clientid = input('\tClient ID: ')
         self.symbols = ['MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS', 'GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI']
         self.exchanges = ['GLOBEX', 'GLOBEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX', 'ECBOT', 'NYMEX', 'NYMEX',
-                            'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX']
-        self.start = input('\tFrom Date (YYYYMMDD HH:MM): ')
-        self.start_run = datetime.now()
-        self.format = '%Y%m%d %H:%M'
-        self.startdt = datetime.strptime(self.start, self.format)       
+                            'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX']     
         self.data_type = 'TRADES'
         self.counter = 0
         self.data = []
         self.tz = pytz.timezone('US/Eastern')
         self.local_tz = get_localzone()
-        self.start_run  = datetime.now(self.tz)
 
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
@@ -80,17 +75,18 @@ class Topo:
         alphanumeric = [character for character in str(self.last) if character.isalnum()]
         end_date = ''.join(alphanumeric)
         final.to_csv('{}_{}-{}_ticks.csv'.format(self.ticket, init_date , end_date))
-        final.to_csv('%s/%s_master.csv'%(self.ticket, self.ticket), mode='a', header=False)
+        final.to_csv('{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False)
         
     def digging(self):
         '''Starts the topo'''
-        self.connect()
-        self.current_time = datetime.now(self.tz).replace(tzinfo=None) #Test Here
-        while not((self.current_time.weekday() == 4) & (self.current_time.hour > 16)): #Be active during the week, finish at market close
-            self.current_time = datetime.now(self.tz).replace(tzinfo=None) #Test Here
+        self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
+        while not((self.current_time.weekday() == 4) & (self.current_time.hour > 17)): #Be active during the week, finish at market close
+            self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
             if ((self.current_time.weekday() == 0)|(self.current_time.weekday() == 1)|(self.current_time.weekday() == 2)\
-                | (self.current_time.weekday() == 3) | (self.current_time.weekday() == 4)) & (self.current_time.hour == 17) & (self.current_time.minute >= 0):
-                self.startdt = self.current_time.replace(hour=18, minute=0, second=1, microsecond=0) - timedelta(days=1) #From when download data
+                | (self.current_time.weekday() == 3) | (self.current_time.weekday() == 4)) & (self.current_time.hour == 17) & (self.current_time.minute <= 1):
+                self.startdt = self.current_time.replace(hour=18, minute=0, second=0, microsecond=0) - timedelta(days=1) #From when download data
+                self.start_run  = datetime.now(self.tz)
+                self.connect()
                 for symbol, exchange in zip(self.symbols, self.exchanges):
                     print('Downloading data for {}'.format(symbol))
                     self.ticket = symbol
@@ -103,6 +99,7 @@ class Topo:
                     self.data = []
                 time_run = 'Minutes Running per Session{}'.format(round((datetime.now(self.tz) - self.start_run).total_seconds()/60, 2))
                 print(time_run)
+                ib.disconnect()
 
 if __name__ == '__main__':
     ib = IB()
