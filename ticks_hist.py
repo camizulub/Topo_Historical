@@ -31,7 +31,7 @@ class Topo:
                 df = util.df(hist)
                 if len(hist) > 0:
                     self.data.append(df)
-                    self.counter += 1
+                    self.counter = 1
                     self.last= df.iloc[-1,0].tz_convert(self.tz).tz_localize(tz = None) #UTC to TZ parameter
                     total = (self.last - self.startdt).total_seconds() #Difference between the current time and the desired initial date
                 else:
@@ -50,8 +50,8 @@ class Topo:
                         percent = 100
                     print(' Progress [%d%%]\r'%percent, end="")
                 else:
-                    finish = df.iloc[0,0].tz_convert(self.tz).tz_localize(tz = None) - timedelta(minutes=1)
-                    end = df.iloc[0,0].tz_convert(self.local_tz).tz_localize(tz = None) - timedelta(minutes=1)
+                    print('IB is not retreiving MORE data for {}'.format(self.ticket))
+                    break #if is not extracting data for the current moment, much less for the past
 
     def save_data(self):
         ''' Preparate and save the data in a CSV file in the destination folder.'''
@@ -74,8 +74,8 @@ class Topo:
         init_date = ''.join(alphanumeric)
         alphanumeric = [character for character in str(self.last) if character.isalnum()]
         end_date = ''.join(alphanumeric)
-        final.to_csv('{}_{}-{}_ticks.csv'.format(self.ticket, init_date , end_date))
-        final.to_csv('{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False)
+        final.to_csv('{}_{}-{}_ticks.csv'.format(self.ticket, init_date , end_date)) #Session
+        #final.to_csv('{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
         
     def digging(self):
         '''Starts the topo'''
@@ -83,9 +83,9 @@ class Topo:
         while not((self.current_time.weekday() == 4) & (self.current_time.hour > 17)): #Be active during the week, finish at market close
             self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
             if ((self.current_time.weekday() == 0)|(self.current_time.weekday() == 1)|(self.current_time.weekday() == 2)\
-                | (self.current_time.weekday() == 3) | (self.current_time.weekday() == 4)) & (self.current_time.hour == 17) & (self.current_time.minute <= 1):
+                | (self.current_time.weekday() == 3) | (self.current_time.weekday() == 4)) & (self.current_time.hour == 17) & (self.current_time.minute <= 7):
                 self.startdt = self.current_time.replace(hour=18, minute=0, second=0, microsecond=0) - timedelta(days=1) #From when download data
-                self.start_run  = datetime.now(self.tz)
+                self.start_run = datetime.now(self.tz) #For calculating the time for downloading the session
                 self.connect()
                 for symbol, exchange in zip(self.symbols, self.exchanges):
                     print('Downloading data for {}'.format(symbol))
