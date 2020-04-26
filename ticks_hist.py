@@ -20,7 +20,7 @@ class Topo:
 
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
-        ib.connect('127.0.0.1', 7498, clientId=self.clientid)
+        ib.connect('127.0.0.1', 7497, clientId=self.clientid)
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
@@ -36,12 +36,26 @@ class Topo:
                     total = (self.last - self.startdt).total_seconds() #Difference between the current time and the desired initial date
                 else:
                     print('IB is not retreiving current data for {}'.format(self.ticket))
-                    break #if is not extracting data for the current moment, much less for the past
+                    break
             else:
                 finish = df.iloc[0,0].tz_convert(self.tz).tz_localize(tz = None) #First date of the last download in our desired TZ
                 end = df.iloc[0,0].tz_convert(self.local_tz).tz_localize(tz = None) #First date of the last download in the machine TZ
                 hist = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
-                if len(hist) > 0:
+                if len(hist) == 0:
+                    while len(hist) == 0:
+                        finish = finish - timedelta(minutes=1) #First date of the last download in our desired TZ
+                        end = end - timedelta(minutes=1) #First date of the last download in the machine TZ
+                        hist = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
+                        if len(hist) > 0:
+                            df = util.df(hist)
+                            self.data.append(df)
+                            sec_diff = (finish - self.startdt).total_seconds() # Number of data pending to download
+                            percent = (100 * ((total - sec_diff) / float(total)))
+                            if sec_diff < 0:
+                                percent = 100
+                            print(' Progress [%d%%]\r'%percent, end="")
+                        if finish < self.startdt: break
+                else:
                     df = util.df(hist)
                     self.data.append(df)
                     sec_diff = (finish - self.startdt).total_seconds() # Number of data pending to download
@@ -49,9 +63,6 @@ class Topo:
                     if sec_diff < 0:
                         percent = 100
                     print(' Progress [%d%%]\r'%percent, end="")
-                else:
-                    print('IB is not retreiving MORE data for {}'.format(self.ticket))
-                    break #if is not extracting data for the current moment, much less for the past
 
     def save_data(self):
         ''' Preparate and save the data in a CSV file in the destination folder.'''
