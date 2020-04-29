@@ -17,6 +17,7 @@ class Topo:
         self.data = []
         self.tz = pytz.timezone('US/Eastern')
         self.local_tz = get_localzone()
+        self.counter_miss = 0
 
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
@@ -43,14 +44,15 @@ class Topo:
                 hist = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
                 if len(hist) == 0:
                     while len(hist) == 0:
-                        finish = finish - timedelta(minutes=1) #First date of the last download in our desired TZ
-                        end = end - timedelta(minutes=1) #First date of the last download in the machine TZ
+                        finish = finish - timedelta(seconds=1) #First date of the last download in our desired TZ
+                        end = end - timedelta(seconds=1) #First date of the last download in the machine TZ
                         hist = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
+                        self.counter_miss += 1
                         if len(hist) > 0:
                             df = util.df(hist)
                             self.data.append(df)
                             sec_diff = (finish - self.startdt).total_seconds() # Number of data pending to download
-                            percent = (100 * ((total - sec_diff) / float(total)))
+                            percent = (100 * ((total - sec_diff) / float(total)))  
                             if sec_diff < 0:
                                 percent = 100
                             print(' Progress [%d%%]\r'%percent, end="")
@@ -79,8 +81,6 @@ class Topo:
             final = final.round(2)
         else:
             final = final.round(5)
-        final = final.groupby(['Date','Price'], sort=False).sum()[['Size']].reset_index() #Compress data for the same time and price
-        final.set_index('Date', inplace=True)
         alphanumeric = [character for character in str(self.startdt) if character.isalnum()]
         init_date = ''.join(alphanumeric)
         alphanumeric = [character for character in str(self.last) if character.isalnum()]
@@ -107,10 +107,13 @@ class Topo:
                     self.looping()
                     if self.counter > 0: self.save_data()
                     self.counter = 0
+                    self.counter_miss = 0
                     self.data = []
+                    print('Failed request # {} for {}'.format(self.counter_miss, self.ticket))
                 time_run = 'Minutes Running per Session{}'.format(round((datetime.now(self.tz) - self.start_run).total_seconds()/60, 2))
                 print(time_run)
                 ib.disconnect()
+                ib.sleep()
 
 if __name__ == '__main__':
     ib = IB()
