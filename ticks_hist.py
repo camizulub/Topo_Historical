@@ -29,7 +29,7 @@ class Topo:
         close = ib.reqHistoricalTicks(self.contract, '', self.current_time, 1000, whatToShow=self.data_type, useRth=False)
         df_close = util.df(close)
         self.last= df_close.iloc[-1,0].tz_convert(self.tz).tz_localize(tz = None) #UTC to TZ parameter
-        while finish < self.current_time and not(finish == self.last):
+        while finish <= self.current_time and not(finish == self.last):
             if self.counter == 0:
                 hist = ib.reqHistoricalTicks(self.contract,self.startdt, '', 1000, whatToShow=self.data_type, useRth=False)
                 df = util.df(hist)
@@ -74,8 +74,10 @@ class Topo:
         print(' ')
         final = pd.concat(self.data) #Master DataFrame
         final.columns = map(lambda x: x.capitalize(), final.columns)
-        final = final.rename(columns={'Time': 'Date'})
+        final = final.rename(columns={'Time': 'Date', 'Price': 'Last', 'Size': 'Volume'})
         final.drop(columns= ['Tickattriblast', 'Exchange', 'Specialconditions'], inplace=True)
+        final['consec'] = (final.Date != final.Date.shift()).cumsum() + (final.Last != final.Last.shift()).cumsum() #Calculates consecutive values
+        final = final.groupby(['consec', 'Date', 'Last']).sum().reset_index().drop('consec', axis=1) #Compressor
         final.set_index('Date', inplace=True)
         final.index = final.index.tz_convert(self.tz).tz_localize(tz = None) #Convert from UTC to TZ parameter
         final = final[:self.current_time] #Filter from the begining date
@@ -87,14 +89,14 @@ class Topo:
         init_date = ''.join(alphanumeric)
         alphanumeric = [character for character in str(self.current_time) if character.isalnum()]
         end_date = ''.join(alphanumeric)
-        final.to_csv('{}_{}-{}_ticks.csv'.format(self.ticket, init_date , end_date)) #Session
-        #final.to_csv('{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
+        final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_{}-{}_ticks.csv'.format(self.ticket, self.ticket, init_date , end_date)) #Session
+        final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
         
     def digging(self):
         '''Starts the topo'''
-        self.current_time = datetime.now(self.tz).replace(day=1, hour=17, minute=0, second=0, microsecond=0, tzinfo=None) #Test Here
+        self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
         while not((self.current_time.weekday() == 4) & (self.current_time.hour > 17)): #Be active during the week, finish at market close
-            self.current_time = datetime.now(self.tz).replace(day=1, hour=17, minute=0, second=0, microsecond=0, tzinfo=None) #Test Here
+            self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
             if ((self.current_time.weekday() == 0)|(self.current_time.weekday() == 1)|(self.current_time.weekday() == 2)\
                 | (self.current_time.weekday() == 3) | (self.current_time.weekday() == 4)) & (self.current_time.hour == 17) & (self.current_time.minute <= 1):
                 self.startdt = self.current_time.replace(hour=18, minute=0, second=0, microsecond=0) - timedelta(days=1) #From when download data
@@ -112,7 +114,7 @@ class Topo:
                     self.counter = 0
                     self.counter_miss = 0
                     self.data = []
-                time_run = 'Minutes Running per Session{}'.format(round((datetime.now(self.tz) - self.start_run).total_seconds()/60, 2))
+                time_run = 'Minutes Running per Session {}'.format(round((datetime.now(self.tz) - self.start_run).total_seconds()/60, 2))
                 print(time_run)
                 ib.disconnect()
                 ib.sleep(1)
