@@ -18,6 +18,7 @@ class Topo:
         self.tz = pytz.timezone('US/Eastern')
         self.local_tz = get_localzone()
         self.counter_miss = 0
+        self.days = {0: 'MONDAY', 1: 'TUESDAY', 2: 'WEDNESDAY', 3: 'THURSDAY', 4: 'FRIDAY'}
 
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
@@ -102,6 +103,7 @@ class Topo:
                 self.startdt = self.current_time.replace(hour=18, minute=0, second=0, microsecond=0) - timedelta(days=1) #From when download data
                 self.start_run = datetime.now(self.tz) #For calculating the time for downloading the session
                 self.connect()
+                print('DOWNLOADING SESSION OF {}'.format(self.days[self.current_time.weekday()]))
                 for symbol, exchange in zip(self.symbols, self.exchanges):
                     print('Downloading data for {}'.format(symbol))
                     self.ticket = symbol
