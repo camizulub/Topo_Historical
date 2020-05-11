@@ -27,11 +27,11 @@ class Topo:
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
         finish = self.current_time - timedelta(minutes=1) #Initial flag
-        end = self.current_time.tz_convert(self.local_tz).tz_localize(tz = None) #Last date of the last closing in the machine TZ
+        end = self.current_time.astimezone(self.local_tz) #Last date of the last closing in the machine TZ
         close = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
         df_close = util.df(close)
         self.last= df_close.iloc[-1,0].tz_convert(self.tz).tz_localize(tz = None) #UTC to TZ parameter
-        while finish <= self.current_time and not(finish == self.last):
+        while finish < self.current_time and not(finish == self.last):
             if self.counter == 0:
                 hist = ib.reqHistoricalTicks(self.contract,self.startdt, '', 1000, whatToShow=self.data_type, useRth=False)
                 df = util.df(hist)
