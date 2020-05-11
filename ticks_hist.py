@@ -5,11 +5,11 @@ from datetime import datetime, timedelta
 from tzlocal import get_localzone
 
 class Topo:
-    '''Download tick data from the IB API from a desired date until the current time'''
+    '''Download tick data from the IB API for the session of each day of the week'''
     def __init__(self):
         '''Initializes the topo atribuites.'''
         self.clientid = input('\tClient ID: ')
-        self.symbols = [ 'GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS',]
+        self.symbols = [ 'GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS']
         self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
 						    'GLOBEX', 'GLOBEX', 'NYMEX', 'ECBOT']     
         self.data_type = 'TRADES'
@@ -22,12 +22,13 @@ class Topo:
 
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
-        ib.connect('127.0.0.1', 7498, clientId=self.clientid)
+        ib.connect('127.0.0.1', 7497, clientId=self.clientid)
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
         finish = self.current_time - timedelta(minutes=1) #Initial flag
-        close = ib.reqHistoricalTicks(self.contract, '', self.current_time, 1000, whatToShow=self.data_type, useRth=False)
+        end = self.current_time.tz_convert(self.local_tz).tz_localize(tz = None) #Last date of the last closing in the machine TZ
+        close = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
         df_close = util.df(close)
         self.last= df_close.iloc[-1,0].tz_convert(self.tz).tz_localize(tz = None) #UTC to TZ parameter
         while finish <= self.current_time and not(finish == self.last):
@@ -98,8 +99,7 @@ class Topo:
         self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
         while not((self.current_time.weekday() == 4) & (self.current_time.hour > 17)): #Be active during the week, finish at market close
             self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
-            if ((self.current_time.weekday() == 0)|(self.current_time.weekday() == 1)|(self.current_time.weekday() == 2)\
-                | (self.current_time.weekday() == 3) | (self.current_time.weekday() == 4)) & (self.current_time.hour == 17) & (self.current_time.minute <= 1):
+            if (self.current_time.weekday() <= 4) & (self.current_time.hour == 17) & (self.current_time.minute <= 1):
                 self.startdt = self.current_time.replace(hour=18, minute=0, second=0, microsecond=0) - timedelta(days=1) #From when download data
                 self.start_run = datetime.now(self.tz) #For calculating the time for downloading the session
                 self.connect()
