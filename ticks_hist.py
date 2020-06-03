@@ -9,7 +9,7 @@ class Topo:
     def __init__(self):
         '''Initializes the topo atribuites.'''
         self.clientid = input('\tClient ID: ')
-        self.symbols = [ 'GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS']
+        self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS']
         self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
 						    'GLOBEX', 'GLOBEX', 'NYMEX', 'ECBOT']     
         self.data_type = 'TRADES'
@@ -26,50 +26,51 @@ class Topo:
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
-        finish = self.current_time - timedelta(minutes=1) #Initial flag
-        end = self.current_time.astimezone(self.local_tz) #Last date of the last closing in the machine TZ
+        end = self.current_time.astimezone(pytz.utc).replace(tzinfo=None) + timedelta(minutes=1) #Last date of the last closing in the machine TZ
         close = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
         df_close = util.df(close)
-        self.last= df_close.iloc[-1,0].tz_convert(self.tz).tz_localize(tz = None) #UTC to TZ parameter
-        while finish < self.current_time and not(finish == self.last):
+        last= df_close.iloc[-1,0].replace(tzinfo=None) #UTC to TZ parameter
+        start = self.startdt.astimezone(pytz.utc).replace(tzinfo=None)
+        while not(end == last):
             if self.counter == 0:
-                hist = ib.reqHistoricalTicks(self.contract,self.startdt, '', 1000, whatToShow=self.data_type, useRth=False)
+                hist = ib.reqHistoricalTicks(self.contract, start, '', 1000, whatToShow=self.data_type, useRth=False)
                 df = util.df(hist)
                 if len(hist) > 0:
                     self.data.append(df)
                     self.counter = 1
-                    total = (self.current_time - self.startdt).total_seconds() #Difference between the current time and the desired initial date
+                    total = (last - start).total_seconds() #Difference between the current time and the desired initial date
                 else:
                     print('IB is not retreiving current data for {}'.format(self.ticket))
                     break
             else:
-                finish = df.iloc[-1,0].tz_convert(self.tz).tz_localize(tz = None) #First date of the last download in our desired TZ
-                end = df.iloc[-1,0].tz_convert(self.local_tz).tz_localize(tz = None) #First date of the last download in the machine TZ
+                end = df.iloc[-1,0].replace(tzinfo=None)
                 hist = ib.reqHistoricalTicks(self.contract, end, '', 1000, whatToShow=self.data_type, useRth=False)
                 if len(hist) == 0:
                     while len(hist) == 0:
-                        finish = finish + timedelta(minutes=1) #First date of the last download in our desired TZ
                         end = end + timedelta(minutes=1) #First date of the last download in the machine TZ
                         hist = ib.reqHistoricalTicks(self.contract, end, '', 1000, whatToShow=self.data_type, useRth=False)
                         self.counter_miss += 1
                         if len(hist) > 0:
                             df = util.df(hist)
                             self.data.append(df)
-                            sec_diff = (self.current_time - finish).total_seconds() # Number of data pending to download
+                            sec_diff = (last - end).total_seconds() # Number of data pending to download
                             percent = (100 * ((total - sec_diff) / float(total)))  
                             print(' Progress [%d%%]\r'%percent, end="")
-                        if (finish > self.current_time or finish == self.last):
-                            percent = 100 
+                        if (end == last):
+                            percent = 100
                             print(' Progress [%d%%]\r'%percent, end="")
                             break
                 else:
                     df = util.df(hist)
-                    self.data.append(df)
-                    sec_diff = (self.current_time - finish).total_seconds() # Number of data pending to download
-                    percent = (100 * ((total - sec_diff) / float(total)))
-                    if (sec_diff < 0 or finish == self.last):
-                        percent = 100
-                    print(' Progress [%d%%]\r'%percent, end="")
+                    if df.iloc[-1,0].replace(tzinfo=None) == end:
+                        print('Topo is asking for the same request')
+                    else:
+                        self.data.append(df)
+                        sec_diff = (last- end).total_seconds() # Number of data pending to download
+                        percent = (100 * ((total - sec_diff) / float(total)))
+                        if (sec_diff < 0 or end == last):
+                            percent = 100
+                        print(' Progress [%d%%]\r'%percent, end="")
 
     def save_data(self):
         ''' Preparate and save the data in a CSV file in the destination folder.'''
@@ -82,7 +83,6 @@ class Topo:
         final = final.groupby(['consec', 'Date', 'Last']).sum().reset_index().drop('consec', axis=1) #Compressor
         final.set_index('Date', inplace=True)
         final.index = final.index.tz_convert(self.tz).tz_localize(tz = None) #Convert from UTC to TZ parameter
-        final = final[:self.current_time] #Filter from the begining date
         if final.iloc[0,0] > 1:
             final = final.round(2)
         else:
@@ -96,11 +96,11 @@ class Topo:
         
     def digging(self):
         '''Starts the topo'''
-        self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
+        self.current_time = datetime.now(self.tz)
         while not((self.current_time.weekday() == 4) & (self.current_time.hour > 17)): #Be active during the week, finish at market close
-            self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0, tzinfo=None) #Test Here
-            if (self.current_time.weekday() <= 4) & (self.current_time.hour == 17) & (self.current_time.minute <= 1):
-                self.startdt = self.current_time.replace(hour=18, minute=0, second=0, microsecond=0) - timedelta(days=1) #From when download data
+            self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0) #Test Here
+            if (self.current_time.weekday() <= 4) & (self.current_time.hour == 17) & (self.current_time.minute <= 2):
+                self.startdt = self.current_time.replace(hour=18, minute=0, tzinfo=None) - timedelta(days=1) #From when download data
                 self.start_run = datetime.now(self.tz) #For calculating the time for downloading the session
                 self.connect()
                 print('DOWNLOADING SESSION OF {}'.format(self.days[self.current_time.weekday()]))
