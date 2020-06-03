@@ -2,7 +2,6 @@ from ib_insync import IB, util, Contract
 import pytz
 import pandas as pd
 from datetime import datetime, timedelta
-from tzlocal import get_localzone
 
 class Topo:
     '''Download tick data from the IB API for the session of each day of the week'''
@@ -16,7 +15,6 @@ class Topo:
         self.counter = 0
         self.data = []
         self.tz = pytz.timezone('US/Eastern')
-        self.local_tz = get_localzone()
         self.counter_miss = 0
         self.days = {0: 'MONDAY', 1: 'TUESDAY', 2: 'WEDNESDAY', 3: 'THURSDAY', 4: 'FRIDAY'}
 
@@ -62,15 +60,12 @@ class Topo:
                             break
                 else:
                     df = util.df(hist)
-                    if df.iloc[-1,0].replace(tzinfo=None) == end:
-                        print('Topo is asking for the same request')
-                    else:
-                        self.data.append(df)
-                        sec_diff = (last- end).total_seconds() # Number of data pending to download
-                        percent = (100 * ((total - sec_diff) / float(total)))
-                        if (sec_diff < 0 or end == last):
-                            percent = 100
-                        print(' Progress [%d%%]\r'%percent, end="")
+                    self.data.append(df)
+                    sec_diff = (last- end).total_seconds() # Number of data pending to download
+                    percent = (100 * ((total - sec_diff) / float(total)))
+                    if (sec_diff < 0 or end == last):
+                        percent = 100
+                    print(' Progress [%d%%]\r'%percent, end="")
 
     def save_data(self):
         ''' Preparate and save the data in a CSV file in the destination folder.'''
@@ -82,14 +77,14 @@ class Topo:
         final['consec'] = (final.Date != final.Date.shift()).cumsum() + (final.Last != final.Last.shift()).cumsum() #Calculates consecutive values
         final = final.groupby(['consec', 'Date', 'Last']).sum().reset_index().drop('consec', axis=1) #Compressor
         final.set_index('Date', inplace=True)
-        final.index = final.index.tz_convert(self.tz).tz_localize(tz = None) #Convert from UTC to TZ parameter
+        final.index = final.index.tz_convert(self.tz).tz_localize(tz=None) #Convert from UTC to TZ parameter
         if final.iloc[0,0] > 1:
             final = final.round(2)
         else:
             final = final.round(5)
-        alphanumeric = [character for character in str(self.startdt) if character.isalnum()]
+        alphanumeric = [character for character in str(self.startdt.repalce(tzinfo=None)) if character.isalnum()]
         init_date = ''.join(alphanumeric)
-        alphanumeric = [character for character in str(self.current_time) if character.isalnum()]
+        alphanumeric = [character for character in str(self.current_time.repalce(tzinfo=None)) if character.isalnum()]
         end_date = ''.join(alphanumeric)
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_{}-{}_ticks.csv'.format(self.ticket, self.ticket, init_date , end_date)) #Session
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
@@ -100,7 +95,7 @@ class Topo:
         while not((self.current_time.weekday() == 4) & (self.current_time.hour > 17)): #Be active during the week, finish at market close
             self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0) #Test Here
             if (self.current_time.weekday() <= 4) & (self.current_time.hour == 17) & (self.current_time.minute <= 2):
-                self.startdt = self.current_time.replace(hour=18, minute=0, tzinfo=None) - timedelta(days=1) #From when download data
+                self.startdt = self.current_time.replace(hour=18, minute=0) - timedelta(days=1) #From when download data
                 self.start_run = datetime.now(self.tz) #For calculating the time for downloading the session
                 self.connect()
                 print('DOWNLOADING SESSION OF {}'.format(self.days[self.current_time.weekday()]))
