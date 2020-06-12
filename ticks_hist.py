@@ -10,7 +10,7 @@ class Topo:
         self.clientid = input('\tClient ID: ')
         self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS']
         self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
-						    'GLOBEX', 'GLOBEX', 'NYMEX', 'ECBOT']     
+						    'GLOBEX', 'GLOBEX', 'NYMEX', 'ECBOT']    
         self.data_type = 'TRADES'
         self.counter = 0
         self.data = []
@@ -24,12 +24,13 @@ class Topo:
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
-        end = self.current_time.astimezone(pytz.utc).replace(tzinfo=None) + timedelta(minutes=1) #Last date of the last closing in the machine TZ
-        close = ib.reqHistoricalTicks(self.contract, '', end, 1000, whatToShow=self.data_type, useRth=False)
+        curr = self.current_time.astimezone(pytz.utc).replace(tzinfo=None) + timedelta(minutes=1) #Last date of the last closing in the machine TZ
+        close = ib.reqHistoricalTicks(self.contract, '', curr, 1000, whatToShow=self.data_type, useRth=False)
         df_close = util.df(close)
         last= df_close.iloc[-1,0].replace(tzinfo=None) #UTC to TZ parameter
         start = self.startdt.astimezone(pytz.utc).replace(tzinfo=None)
-        while not(end == last):
+        end = last - timedelta(minutes=1)
+        while not(end >= last):
             if self.counter == 0:
                 hist = ib.reqHistoricalTicks(self.contract, start, '', 1000, whatToShow=self.data_type, useRth=False)
                 df = util.df(hist)
@@ -37,11 +38,11 @@ class Topo:
                     self.data.append(df)
                     self.counter = 1
                     total = (last - start).total_seconds() #Difference between the current time and the desired initial date
+                    end = df.iloc[-1,0].replace(tzinfo=None)
                 else:
                     print('IB is not retreiving current data for {}'.format(self.ticket))
                     break
             else:
-                end = df.iloc[-1,0].replace(tzinfo=None)
                 hist = ib.reqHistoricalTicks(self.contract, end, '', 1000, whatToShow=self.data_type, useRth=False)
                 if len(hist) == 0:
                     while len(hist) == 0:
@@ -54,17 +55,25 @@ class Topo:
                             sec_diff = (last - end).total_seconds() # Number of data pending to download
                             percent = (100 * ((total - sec_diff) / float(total)))  
                             print(' Progress [%d%%]\r'%percent, end="")
-                        if (end == last):
+                        if (end >= last):
                             percent = 100
                             print(' Progress [%d%%]\r'%percent, end="")
                             break
                 else:
                     df = util.df(hist)
+                    if end == df.iloc[-1,0].replace(tzinfo=None):
+                        new_end = end + timedelta(seconds=1)
+                        hist = ib.reqHistoricalTicks(self.contract, new_end, '', 1000, whatToShow=self.data_type, useRth=False)
+                        df = util.df(hist)
+                        end = df.iloc[-1,0].replace(tzinfo=None)
                     self.data.append(df)
+                    end = df.iloc[-1,0].replace(tzinfo=None)
                     sec_diff = (last- end).total_seconds() # Number of data pending to download
                     percent = (100 * ((total - sec_diff) / float(total)))
-                    if (sec_diff < 0 or end == last):
+                    if (sec_diff < 0 or end >= last):
                         percent = 100
+                        print(' Progress [%d%%]\r'%percent, end="")
+                        break
                     print(' Progress [%d%%]\r'%percent, end="")
 
     def save_data(self):
@@ -82,9 +91,10 @@ class Topo:
             final = final.round(2)
         else:
             final = final.round(5)
-        alphanumeric = [character for character in str(self.startdt.repalce(tzinfo=None)) if character.isalnum()]
+        final = final[:self.current_time.replace(tzinfo=None)]
+        alphanumeric = [character for character in str(self.startdt.replace(tzinfo=None)) if character.isalnum()]
         init_date = ''.join(alphanumeric)
-        alphanumeric = [character for character in str(self.current_time.repalce(tzinfo=None)) if character.isalnum()]
+        alphanumeric = [character for character in str(self.current_time.replace(tzinfo=None)) if character.isalnum()]
         end_date = ''.join(alphanumeric)
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_{}-{}_ticks.csv'.format(self.ticket, self.ticket, init_date , end_date)) #Session
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
