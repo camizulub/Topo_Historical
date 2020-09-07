@@ -1,4 +1,5 @@
-from ib_insync import IB, util, Contract
+from arctic import Arctic
+from ib_insync import IB, util, Contract, Future
 import pytz
 import pandas as pd
 from datetime import datetime, timedelta
@@ -7,10 +8,13 @@ class Topo:
     '''Download tick data from the IB API for the session of each day of the week'''
     def __init__(self):
         '''Initializes the topo atribuites.'''
+        store = Arctic('localhost')
+        self.library = store['Futures_Historical_Ticks']
         self.clientid = input('\tClient ID: ')
-        self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'NG', 'ZS']
+        self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY','YM', 'NG', 'ZS', 'MES',
+                         'MNQ', 'M2K', 'MYM', 'QM']
         self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
-						    'GLOBEX', 'GLOBEX', 'NYMEX', 'ECBOT']    
+						    'GLOBEX', 'GLOBEX', 'ECBOT', 'NYMEX', 'ECBOT', 'GLOBEX', 'GLOBEX', 'GLOBEX', 'ECBOT', 'NYMEX']   
         self.data_type = 'TRADES'
         self.counter = 0
         self.data = []
@@ -21,6 +25,30 @@ class Topo:
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
         ib.connect('127.0.0.1', 7497, clientId=self.clientid)
+
+    def local_symbol(self, symbol):
+        if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K']:
+            contract_dates = pd.read_csv('/home/camilo/Dropbox/Camilo/Algorithms/Topo/contract_dates/indexes_globex.txt', parse_dates=True)
+        elif symbol in ['YM', 'MYM', 'DAX']:
+            contract_dates = pd.read_csv('/home/camilo/Dropbox/Camilo/Algorithms/Topo/contract_dates/indexes_ecbot_dtb.txt', parse_dates=True)
+        elif symbol in ['QO', 'MGC']:
+            contract_dates = pd.read_csv('/home/camilo/Dropbox/Camilo/Algorithms/Topo/contract_dates/QO_MGC.txt', parse_dates=True)
+        elif symbol in ['CL', 'QM']: contract_dates = pd.read_csv('/home/camilo/Dropbox/Camilo/Algorithms/Topo/contract_dates/CL_QM.txt')
+        else: contract_dates = pd.read_csv('/home/camilo/Dropbox/Camilo/Algorithms/Topo/contract_dates/%s.txt'%symbol, parse_dates=True)
+        
+        for i in range(len(contract_dates)):
+            initial_date = pd.to_datetime(contract_dates.iloc[i].initial_date).date()
+            final_date = pd.to_datetime(contract_dates.iloc[i].final_date).date()
+            if initial_date <= self.current_time.date() <= final_date:
+                current_contract = contract_dates.iloc[i].contract
+                break
+        
+        self.local = current_contract
+        if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K', 'QO', 'CL', 'MGC', 'QM']:
+            self.local = '%s%s'%(symbol, current_contract)
+        if symbol in ['YM', 'ZS']: self.local = '%s   %s'%(symbol, current_contract)
+        if symbol == 'MYM': self.local = '%s  %s'%(symbol, current_contract)
+        if symbol == 'DAX': self.local = 'FDAX %s'%current_contract
 
     def looping(self):
         ''' Creates the routine for downloading the historical data.'''
@@ -39,6 +67,9 @@ class Topo:
                     self.counter = 1
                     total = (last - start).total_seconds() #Difference between the current time and the desired initial date
                     end = df.iloc[-1,0].replace(tzinfo=None)
+                    if (end >= last):
+                        percent = 100
+                        print(' Progress [%d%%]\r'%percent, end="")
                 else:
                     print('IB is not retreiving current data for {}'.format(self.ticket))
                     break
@@ -98,6 +129,8 @@ class Topo:
         end_date = ''.join(alphanumeric)
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_{}-{}_ticks.csv'.format(self.ticket, self.ticket, init_date , end_date)) #Session
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
+        final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_renko.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Renko
+        self.library.append(self.ticket, final, metadata={'source': 'Qs'})
         
     def digging(self):
         '''Starts the topo'''
@@ -113,7 +146,9 @@ class Topo:
                     print('Downloading data for {}'.format(symbol))
                     self.ticket = symbol
                     self.exch = exchange
-                    self.contract = Contract(secType='CONTFUT', exchange=self.exch, symbol=self.ticket)
+                    self.local_symbol(symbol)
+                    print('Local Symbol {}'.format(self.local))
+                    self.contract = Contract(secType='FUT', exchange=self.exch, localSymbol=self.local)
                     ib.qualifyContracts(self.contract)
                     self.looping()
                     if self.counter > 0: self.save_data()
