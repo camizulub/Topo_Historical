@@ -18,6 +18,8 @@ class Topo:
         self.data_type = 'TRADES'
         self.counter = 0
         self.data = []
+        self.re_run = False
+        self.run = 0
         self.tz = pytz.timezone('US/Eastern')
         self.counter_miss = 0
         self.days = {0: 'MONDAY', 1: 'TUESDAY', 2: 'WEDNESDAY', 3: 'THURSDAY', 4: 'FRIDAY'}
@@ -118,10 +120,14 @@ class Topo:
         final = final.groupby(['consec', 'Date', 'Last']).sum().reset_index().drop('consec', axis=1) #Compressor
         final.set_index('Date', inplace=True)
         final.index = final.index.tz_convert(self.tz).tz_localize(tz=None) #Convert from UTC to TZ parameter
-        if final.iloc[0,0] > 1:
-            final = final.round(2)
-        else:
+        if self.ticket in ['QI', 'ZS']:
+            final = final.round(4)
+        elif self.ticket in ['MXP']:
             final = final.round(5)
+        elif self.ticket in ['NG', 'QM']:
+            final = final.round(3)
+        else:
+            final = final.round(2)
         final = final[:self.current_time.replace(tzinfo=None)]
         alphanumeric = [character for character in str(self.startdt.replace(tzinfo=None)) if character.isalnum()]
         init_date = ''.join(alphanumeric)
@@ -129,18 +135,23 @@ class Topo:
         end_date = ''.join(alphanumeric)
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_{}-{}_ticks.csv'.format(self.ticket, self.ticket, init_date , end_date)) #Session
         final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
-        final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_renko.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Renko
         self.library.append(self.ticket, final, metadata={'source': 'Qs'})
+        if self.ticket in ['MES', 'MNQ', 'M2K', 'MGC']:
+            final.to_csv('/home/camilo/Dropbox/Camilo/Topo_Data/{}/{}_renko.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Renko
         
     def digging(self):
         '''Starts the topo'''
         self.current_time = datetime.now(self.tz)
         while not((self.current_time.weekday() == 4) & (self.current_time.hour > 17)): #Be active during the week, finish at market close
-            self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0) #Test Here
+            if self.run >= 1: #If the code downloaded the data for the selected day do not do it again
+                break
+            self.current_time = datetime.now(self.tz).replace(second=0, microsecond=0) #Modify if you need to download an specific date
             if (self.current_time.weekday() <= 4) & (self.current_time.hour == 17) & (self.current_time.minute <= 2):
                 self.startdt = self.current_time.replace(hour=18, minute=0) - timedelta(days=1) #From when download data
                 self.start_run = datetime.now(self.tz) #For calculating the time for downloading the session
                 self.connect()
+                if self.re_run: #Flag when a specific session is requiered to download
+                    self.run += 1
                 print('DOWNLOADING SESSION OF {}'.format(self.days[self.current_time.weekday()]))
                 for symbol, exchange in zip(self.symbols, self.exchanges):
                     print('Downloading data for {}'.format(symbol))
