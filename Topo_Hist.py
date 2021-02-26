@@ -47,13 +47,13 @@ class Topo:
 
     def local_symbol(self, symbol):
         if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K']:
-            contract_dates = pd.read_csv('/contract_dates/indexes_globex.txt', parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/indexes_globex.txt', parse_dates=True)
         elif symbol in ['YM', 'MYM', 'DAX']:
-            contract_dates = pd.read_csv('/contract_dates/indexes_ecbot_dtb.txt', parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/indexes_ecbot_dtb.txt', parse_dates=True)
         elif symbol in ['QO', 'MGC']:
-            contract_dates = pd.read_csv('/contract_dates/QO_MGC.txt', parse_dates=True)
-        elif symbol in ['CL', 'QM']: contract_dates = pd.read_csv('/contract_dates/CL_QM.txt')
-        else: contract_dates = pd.read_csv('/contract_dates/%s.txt'%symbol, parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/QO_MGC.txt', parse_dates=True)
+        elif symbol in ['CL', 'QM']: contract_dates = pd.read_csv('contract_dates/CL_QM.txt')
+        else: contract_dates = pd.read_csv('contract_dates/%s.txt'%symbol, parse_dates=True)
         
         for i in range(len(contract_dates)):
             initial_date = pd.to_datetime(contract_dates.iloc[i].initial_date).date()
