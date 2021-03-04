@@ -150,8 +150,8 @@ class Topo:
         init_date = ''.join(alphanumeric)
         alphanumeric = [character for character in str(self.current_time.replace(tzinfo=None)) if character.isalnum()]
         end_date = ''.join(alphanumeric)
-        final.to_csv('/Topo_Data/{}/{}_{}-{}_ticks.csv'.format(self.ticket, self.ticket, init_date , end_date)) #Session
-        final.to_csv('/Topo_Data/{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
+        final.to_csv('Topo_Data/{}/{}_{}-{}_ticks.csv'.format(self.ticket, self.ticket, init_date , end_date)) #Session
+        final.to_csv('Topo_Data/{}/{}_master.csv'.format(self.ticket, self.ticket), mode='a', header=False) #Master
         self.library.append(self.ticket, final, metadata={'source': 'Qs'})
         
     def digging(self):
