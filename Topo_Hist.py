@@ -11,6 +11,7 @@ from arctic import Arctic
 from arctic.auth import Credential
 from arctic.hooks import register_get_auth_hook
 from ib_insync import IB, util, Contract, Future
+import json
 import pytz
 import pandas as pd
 from datetime import datetime, timedelta
@@ -20,8 +21,6 @@ class Topo:
     '''Download tick data from the IB API for the session of each day of the week'''
     def __init__(self):
         '''Initializes the topo atribuites.'''
-        store = Arctic('db')
-        self.library = store['Futures_Historical_Ticks']
         self.clientid = input('\tClient ID: ')
         self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'YM', 'NG', 'ZS', 'MES', 
                          'MNQ','M2K', 'MYM', 'QM', 'BRR']
@@ -44,18 +43,22 @@ class Topo:
         self.telegram_token = credentials_json['telegram']['bot_token']
         self.telegram_chat = credentials_json['telegram']['bot_chatID']
 
-    def arctic_auth_hook(mongo_host, app, database):
+    def arctic_auth_hook(self, mongo_host, app, database):
         '''Auntenticates to mongodb database'''
         return Credential(
         database="arctic",
         user=self.mongo_user,
         password=self.mongo_user_pass,
         )   
+    def db_connect(self):
+        '''Connects to Arctic database.'''
+        register_get_auth_hook(self.arctic_auth_hook)
+        store = Arctic('db')
+        self.library = store['Futures_Historical_Ticks']
 
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
         ib.connect('127.0.0.1', 7497, clientId=self.clientid)
-        register_get_auth_hook(self.arctic_auth_hook)
 
     def send_telegram_message(self, message):
         '''Send telegram message to specific group'''
@@ -214,5 +217,7 @@ if __name__ == '__main__':
     ib = IB()
     print('Starting')
     juancho = Topo()
+    juancho.credentials()
+    juancho.db_connect()
     juancho.digging()
     print('Finish')      
