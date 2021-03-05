@@ -8,6 +8,8 @@
 # camilo.zuluaga.trader@gmail.com
 #
 from arctic import Arctic
+from arctic.auth import Credential
+from arctic.hooks import register_get_auth_hook
 from ib_insync import IB, util, Contract, Future
 import pytz
 import pandas as pd
@@ -34,14 +36,31 @@ class Topo:
         self.counter_miss = 0
         self.days = {0: 'MONDAY', 1: 'TUESDAY', 2: 'WEDNESDAY', 3: 'THURSDAY', 4: 'FRIDAY'}
 
+    def credentials(self):
+        '''Reads the credentials for authentications'''
+        credentials_json = json.load(open('credentials.json'))
+        self.mongo_user = credentials_json['mongo']['user']
+        self.mongo_user_pass = credentials_json['mongo']['password']
+        self.telegram_token = credentials_json['telegram']['bot_token']
+        self.telegram_chat = credentials_json['telegram']['bot_chatID']
+
+    def arctic_auth_hook(mongo_host, app, database):
+        '''Auntenticates to mongodb database'''
+        return Credential(
+        database="arctic",
+        user=self.mongo_user,
+        password=self.mongo_user_pass,
+        )   
+
     def connect(self):
         '''Connects to IB Gateway or TWS.'''
         ib.connect('127.0.0.1', 7497, clientId=self.clientid)
+        register_get_auth_hook(self.arctic_auth_hook)
 
     def send_telegram_message(self, message):
         '''Send telegram message to specific group'''
-        bot_token = '1204313430:AAGonra1LaFhyI1gCVOHsz8yAohJUeFgplo'
-        bot_chatID = '-497353264'
+        bot_token = self.telegram_token
+        bot_chatID = self.telegram_chat
         url = 'https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s'%(bot_token, bot_chatID, message)
         requests.get(url)
 
