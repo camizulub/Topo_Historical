@@ -13,6 +13,7 @@ from arctic.hooks import register_get_auth_hook
 from ib_insync import IB, util, Contract, Future
 import json
 import pytz
+import numpy
 import pandas as pd
 from datetime import datetime, timedelta
 import requests
