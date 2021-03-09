@@ -215,7 +215,7 @@ class Topo:
 
 if __name__ == '__main__':
     ib = IB()
-    print('Starting')
+    print('Starting Topo')
     juancho = Topo()
     print('Reading Credentials')
     juancho.credentials()
