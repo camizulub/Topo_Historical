@@ -5,10 +5,10 @@ import os
 symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY','YM', 'NG', 'ZS', 'MES',
                          'MNQ', 'M2K', 'MYM', 'QM', 'BRR']
 
-for symbol in symbols:  
+for symbol in symbols:
 # Get a list of all the file paths that ends with wildcard
-    fileList = glob.glob("{}/{}_2*ticks.csv".format(symbol, symbol))
-    print('Deleting the following file')
+    fileList = glob.glob("Topo_Data/{}/{}_2*ticks.csv".format(symbol, symbol))
+    print('Deleting the following file for {}'.format(symbol))
     print(fileList)
     # Iterate over the list of filepaths & remove each file.
     for filePath in fileList:
@@ -22,4 +22,4 @@ for symbol in symbols:
     # Cleans the master data file
     df = pd.DataFrame(columns=['Date', 'Last', 'Volume'])
     df.set_index('Date', inplace=True)
-    df.to_csv(path+'{}/{}_master.csv'.format(symbol, symbol))
+    df.to_csv('Topo_Data/{}/{}_master.csv'.format(symbol, symbol))
