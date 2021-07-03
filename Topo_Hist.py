@@ -23,7 +23,7 @@ class Topo:
         '''Initializes the topo atribuites.'''
         self.clientid = input('\tClient ID: ')
         self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'YM', 'NG', 'ZS', 'MES', 
-                         'MNQ','M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT', ]
+                         'MNQ','M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT']
         self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
 	                  'GLOBEX', 'GLOBEX','ECBOT', 'NYMEX', 'ECBOT', 'GLOBEX', 'GLOBEX', 'GLOBEX', 'ECBOT', 'NYMEX', 'CMECRYPTO',
 			  'CMECRYPTO', 'CMECRYPTO']   
