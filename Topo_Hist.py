@@ -23,10 +23,10 @@ class Topo:
         '''Initializes the topo atribuites.'''
         self.clientid = input('\tClient ID: ')
         self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'YM', 'NG', 'ZS', 'MES', 
-                         'MNQ','M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT']
+                         'MNQ','M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT', 'MCL']
         self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
 	                  'GLOBEX', 'GLOBEX','ECBOT', 'NYMEX', 'ECBOT', 'GLOBEX', 'GLOBEX', 'GLOBEX', 'ECBOT', 'NYMEX', 'CMECRYPTO',
-			  'CMECRYPTO', 'CMECRYPTO']   
+			  'CMECRYPTO', 'CMECRYPTO', 'NYMEX']   
         self.data_type = 'TRADES'
         self.counter = 0
         self.data = []
@@ -75,7 +75,7 @@ class Topo:
             contract_dates = pd.read_csv('contract_dates/indexes_ecbot_dtb.txt', parse_dates=True)
         elif symbol in ['QO', 'MGC']:
             contract_dates = pd.read_csv('contract_dates/QO_MGC.txt', parse_dates=True)
-        elif symbol in ['CL', 'QM']: contract_dates = pd.read_csv('contract_dates/CL_QM.txt')
+        elif symbol in ['CL', 'QM', 'MCL']: contract_dates = pd.read_csv('contract_dates/CL_QM.txt')
         else: contract_dates = pd.read_csv('contract_dates/%s.txt'%symbol, parse_dates=True)
         
         for i in range(len(contract_dates)):
@@ -86,7 +86,7 @@ class Topo:
                 break
         
         self.local = current_contract
-        if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K', 'QO', 'CL', 'MGC', 'QM']:
+        if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K', 'QO', 'CL', 'MGC', 'QM', 'MCL']:
             self.local = '%s%s'%(symbol, current_contract)
         if symbol in ['YM', 'ZS']: self.local = '%s   %s'%(symbol, current_contract)
         if symbol == 'MYM': self.local = '%s  %s'%(symbol, current_contract)
