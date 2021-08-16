@@ -23,10 +23,10 @@ class Topo:
         '''Initializes the topo atribuites.'''
         self.clientid = input('\tClient ID: ')
         self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'YM', 'NG', 'ZS', 'MES', 
-                         'MNQ','M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT', 'MCL']
+                         'MNQ','M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT', 'MCL', '2YY', '5YY', '10Y', '30Y']
         self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
 	                  'GLOBEX', 'GLOBEX','ECBOT', 'NYMEX', 'ECBOT', 'GLOBEX', 'GLOBEX', 'GLOBEX', 'ECBOT', 'NYMEX', 'CMECRYPTO',
-			  'CMECRYPTO', 'CMECRYPTO', 'NYMEX']   
+			  'CMECRYPTO', 'CMECRYPTO', 'NYMEX', 'ECBOT', 'ECBOT', 'ECBOT', 'ECBOT']   
         self.data_type = 'TRADES'
         self.counter = 0
         self.data = []
@@ -73,6 +73,8 @@ class Topo:
             contract_dates = pd.read_csv('contract_dates/indexes_globex.txt', parse_dates=True)
         elif symbol in ['YM', 'MYM', 'DAX']:
             contract_dates = pd.read_csv('contract_dates/indexes_ecbot_dtb.txt', parse_dates=True)
+        elif symbol in ['2YY', '5YY', '10Y', '30Y']:
+            contract_dates = pd.read_csv('contract_dates/yields_ecbot.txt', parse_dates=True)
         elif symbol in ['QO', 'MGC']:
             contract_dates = pd.read_csv('contract_dates/QO_MGC.txt', parse_dates=True)
         elif symbol in ['CL', 'QM', 'MCL']: contract_dates = pd.read_csv('contract_dates/CL_QM.txt')
@@ -88,7 +90,7 @@ class Topo:
         self.local = current_contract
         if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K', 'QO', 'CL', 'MGC', 'QM', 'MCL']:
             self.local = '%s%s'%(symbol, current_contract)
-        if symbol in ['YM', 'ZS']: self.local = '%s   %s'%(symbol, current_contract)
+        if symbol in ['YM', 'ZS', '2YY', '5YY', '10Y', '30Y']: self.local = '%s   %s'%(symbol, current_contract)
         if symbol == 'MYM': self.local = '%s  %s'%(symbol, current_contract)
         if symbol == 'DAX': self.local = 'FDAX %s'%current_contract
 
