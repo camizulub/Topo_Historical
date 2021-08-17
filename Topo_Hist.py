@@ -166,7 +166,7 @@ class Topo:
             final = final.round(4)
         elif self.ticket in ['MXP']:
             final = final.round(5)
-        elif self.ticket in ['NG', 'QM']:
+        elif self.ticket in ['NG', 'QM', '2YY', '5YY', '10Y', '30Y']:
             final = final.round(3)
         else:
             final = final.round(2)
