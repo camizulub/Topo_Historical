@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY','YM', 'NG', 'ZS', 'MES',
-                         'MNQ', 'M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT', '2YY', '5YY', '10Y', '30Y']
+                         'MNQ', 'M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT', 'MCL', '2YY', '5YY', '10Y', '30Y']
 
 for symbol in symbols:
 # Get a list of all the file paths that ends with wildcard
