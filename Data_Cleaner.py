@@ -23,3 +23,6 @@ for symbol in symbols:
     df = pd.DataFrame(columns=['Date', 'Last', 'Volume'])
     df.set_index('Date', inplace=True)
     df.to_csv('Topo_Data/{}/{}_master.csv'.format(symbol, symbol))
+    df2 = pd.DataFrame(columns=['Date', 'Bid', 'Ask', 'Bid_Volume', 'Ask_Volume'])
+    df2.set_index('Date', inplace=True)
+    df2.to_csv('Topo_Data/{}/{}_master_BA.csv'.format(symbol, symbol))
