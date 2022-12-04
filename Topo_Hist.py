@@ -24,9 +24,9 @@ class Topo:
         self.clientid = input('\tClient ID: ')
         self.symbols = ['GC', 'SI', 'PL', 'PA', 'MGC', 'QO', 'QI', 'MXP', 'ES', 'CL', 'NQ', 'RTY', 'YM', 'NG', 'ZS', 'MES', 
                          'MNQ','M2K', 'MYM', 'QM', 'BRR', 'ETHUSDRR', 'MBT', 'MCL', '2YY', '5YY', '10Y', '30Y']
-        self.exchanges = ['NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'NYMEX', 'GLOBEX', 'GLOBEX', 'NYMEX',
-	                  'GLOBEX', 'GLOBEX','ECBOT', 'NYMEX', 'ECBOT', 'GLOBEX', 'GLOBEX', 'GLOBEX', 'ECBOT', 'NYMEX', 'CMECRYPTO',
-			  'CMECRYPTO', 'CMECRYPTO', 'NYMEX', 'ECBOT', 'ECBOT', 'ECBOT', 'ECBOT']   
+        self.exchanges = ['COMEX', 'COMEX', 'NYMEX', 'NYMEX', 'COMEX', 'COMEX', 'COMEX', 'CME', 'CME', 'NYMEX',
+	                        'CME', 'CME','CBOT', 'NYMEX', 'CBOT', 'CME', 'CME', 'CME', 'CBOT', 'NYMEX', 'CME',
+			                'CME', 'CME', 'NYMEX', 'CBOT', 'CBOT', 'CBOT', 'CBOT']
         self.data_type = 'TRADES'
         self.counter = 0
         self.data = []
@@ -70,11 +70,11 @@ class Topo:
 
     def local_symbol(self, symbol):
         if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K']:
-            contract_dates = pd.read_csv('contract_dates/indexes_globex.txt', parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/indexes_CME.txt', parse_dates=True)
         elif symbol in ['YM', 'MYM', 'DAX']:
-            contract_dates = pd.read_csv('contract_dates/indexes_ecbot_dtb.txt', parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/indexes_ECBOT_dtb.txt', parse_dates=True)
         elif symbol in ['2YY', '5YY', '10Y', '30Y']:
-            contract_dates = pd.read_csv('contract_dates/yields_ecbot.txt', parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/yields_ECBOT.txt', parse_dates=True)
         elif symbol in ['QO', 'MGC']:
             contract_dates = pd.read_csv('contract_dates/QO_MGC.txt', parse_dates=True)
         elif symbol in ['CL', 'QM', 'MCL']: contract_dates = pd.read_csv('contract_dates/CL_QM.txt')
@@ -90,7 +90,8 @@ class Topo:
         self.local = current_contract
         if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K', 'QO', 'CL', 'MGC', 'QM', 'MCL']:
             self.local = '%s%s'%(symbol, current_contract)
-        if symbol in ['YM', 'ZS', '2YY', '5YY', '10Y', '30Y']: self.local = '%s   %s'%(symbol, current_contract)
+        if symbol in ['YM', 'ZS']: self.local = '%s   %s'%(symbol, current_contract)
+        if symbol in ['2YY', '5YY', '10Y', '30Y']: self.local = '%s  %s'%(symbol, current_contract)
         if symbol == 'MYM': self.local = '%s  %s'%(symbol, current_contract)
         if symbol == 'DAX': self.local = 'FDAX %s'%current_contract
 
@@ -123,6 +124,7 @@ class Topo:
                     while len(hist) == 0:
                         end = end + timedelta(minutes=1) #First date of the last download in the machine TZ
                         hist = ib.reqHistoricalTicks(self.contract, end, '', 1000, whatToShow=self.data_type, useRth=False)
+                        print(hist)
                         self.counter_miss += 1
                         if len(hist) > 0:
                             df = util.df(hist)
@@ -166,7 +168,7 @@ class Topo:
             final = final.round(4)
         elif self.ticket in ['MXP']:
             final = final.round(5)
-        elif self.ticket in ['NG', 'QM', '2YY', '5YY', '10Y', '30Y']:
+        elif self.ticket in ['SI', 'NG', 'QM', '2YY', '5YY', '10Y', '30Y']:
             final = final.round(3)
         else:
             final = final.round(2)
@@ -225,4 +227,4 @@ if __name__ == '__main__':
     juancho.db_connect()
     print('Connected to Arctic')
     juancho.digging()
-    print('Finish')      
+    print('Finish')
