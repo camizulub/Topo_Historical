@@ -18,7 +18,7 @@ for symbol in symbols:
             print("Error while deleting file : ", filePath)
 
 for symbol in symbols:
-    print('Cleaning Master File')
+    print('Cleaning Master File for {}'.format(symbol))
     # Cleans the master data file
     df = pd.DataFrame(columns=['Date', 'Last', 'Volume'])
     df.set_index('Date', inplace=True)
