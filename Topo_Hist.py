@@ -72,12 +72,12 @@ class Topo:
         if symbol in ['ES', 'RTY', 'NQ', 'MES', 'MNQ', 'M2K']:
             contract_dates = pd.read_csv('contract_dates/indexes_CME.txt', parse_dates=True)
         elif symbol in ['YM', 'MYM', 'DAX']:
-            contract_dates = pd.read_csv('contract_dates/indexes_ECBOT_dtb.txt', parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/indexes_cbot_dtb.txt', parse_dates=True)
         elif symbol in ['2YY', '5YY', '10Y', '30Y']:
-            contract_dates = pd.read_csv('contract_dates/yields_ECBOT.txt', parse_dates=True)
+            contract_dates = pd.read_csv('contract_dates/yields_cbot.txt', parse_dates=True)
         elif symbol in ['QO', 'MGC']:
             contract_dates = pd.read_csv('contract_dates/QO_MGC.txt', parse_dates=True)
-        elif symbol in ['CL', 'QM', 'MCL']: contract_dates = pd.read_csv('contract_dates/CL_QM.txt')
+        elif symbol in ['CL', 'QM', 'MCL']: contract_dates = pd.read_csv('contract_dates/CL_QM_MCL.txt')
         else: contract_dates = pd.read_csv('contract_dates/%s.txt'%symbol, parse_dates=True)
         
         for i in range(len(contract_dates)):
